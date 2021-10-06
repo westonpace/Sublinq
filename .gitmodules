@@ -1,3 +1,6 @@
 [submodule "Submodules/substrait"]
 	path = Submodules/substrait
 	url = https://github.com/substrait-io/substrait.git
+[submodule "Submodules/flatbuffers"]
+	path = Submodules/flatbuffers
+	url = https://github.com/google/flatbuffers.git

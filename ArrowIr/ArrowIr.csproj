@@ -9,12 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Apache.Arrow" Version="5.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ArrowIr\ArrowIr.csproj" />
-    <ProjectReference Include="..\Substrait\Substrait.csproj" />
+    <ProjectReference Include="..\Submodules\flatbuffers\net\FlatBuffers\FlatBuffers.csproj" />
   </ItemGroup>
 
 </Project>
