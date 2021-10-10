@@ -3,7 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace DataLinq
+namespace SubLinq
 {
     public abstract class BaseQueryProvider : IQueryProvider
     {

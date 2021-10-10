@@ -1,17 +1,17 @@
 using System;
 using System.Runtime.InteropServices;
 using Apache.Arrow;
-using Datalinq.ArrowIr;
-using Datalinq.ArrowIr.Arrow;
+using SubLinq.ArrowIr;
+using SubLinq.ArrowIr.Arrow;
 using FlatBuffers;
 using Google.Protobuf;
 using Substrait.Protobuf;
-using Expression = Datalinq.ArrowIr.Expression;
-using Field = Datalinq.ArrowIr.Arrow.Field;
-using Schema = Datalinq.ArrowIr.Arrow.Schema;
+using Expression = SubLinq.ArrowIr.Expression;
+using Field = SubLinq.ArrowIr.Arrow.Field;
+using Schema = SubLinq.ArrowIr.Arrow.Schema;
 using Type = Substrait.Protobuf.Type;
 
-namespace DataLinq
+namespace SubLinq
 {
     public class SubstraitToArrow
     {
@@ -224,52 +224,52 @@ namespace DataLinq
                 switch (type.KindCase)
                 {
                     case Type.KindOneofCase.Binary:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Binary);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Binary);
                         Field.AddType(_builder, CreateBinary().Value);
                         Field.AddNullable(_builder, type.Binary.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.Bool:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Bool);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Bool);
                         Field.AddType(_builder, CreateBool().Value);
                         Field.AddNullable(_builder, type.Bool.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.Fp32:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.FloatingPoint);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.FloatingPoint);
                         Field.AddType(_builder, CreateFloat().Value);
                         Field.AddNullable(_builder, type.Fp32.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.Fp64:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.FloatingPoint);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.FloatingPoint);
                         Field.AddType(_builder, CreateDouble().Value);
                         Field.AddNullable(_builder, type.Fp64.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.I8:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Int);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
                         Field.AddType(_builder, CreateSignedInt(8).Value);
                         Field.AddNullable(_builder, type.I8.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.I16:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Int);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
                         Field.AddType(_builder, CreateSignedInt(16).Value);
                         Field.AddNullable(_builder, type.I16.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.I32:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Int);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
                         Field.AddType(_builder, CreateSignedInt(32).Value);
                         Field.AddNullable(_builder, type.I32.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.I64:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Int);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
                         Field.AddType(_builder, CreateSignedInt(64).Value);
                         Field.AddNullable(_builder, type.I64.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.String:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Utf8);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Utf8);
                         Field.AddType(_builder, CreateString().Value);
                         Field.AddNullable(_builder, type.String.Nullability != Type.Types.Nullability.Required);
                         break;
                     case Type.KindOneofCase.Struct:
-                        Field.AddTypeType(_builder, Datalinq.ArrowIr.Arrow.Type.Struct_);
+                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Struct_);
                         throw new Exception("TO-DO");
                     default:
                         throw new NotImplementedException(

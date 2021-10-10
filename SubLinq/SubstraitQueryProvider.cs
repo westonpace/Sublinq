@@ -3,7 +3,7 @@ using Substrait.Protobuf;
 using Expression = System.Linq.Expressions.Expression;
 using Type = Substrait.Protobuf.Type;
 
-namespace DataLinq
+namespace SubLinq
 {
     public class SubstraitQueryProvider : BaseQueryProvider
     {

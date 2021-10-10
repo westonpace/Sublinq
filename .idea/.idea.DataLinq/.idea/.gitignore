@@ -2,7 +2,7 @@
 /shelf/
 /workspace.xml
 # Rider ignored files
-/.idea.DataLinq.iml
+/.idea.SubLinq.iml
 /contentModel.xml
 /modules.xml
 /projectSettingsUpdater.xml

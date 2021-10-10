@@ -1,6 +1,6 @@
 using Substrait.Protobuf;
 
-namespace DataLinq
+namespace SubLinq
 {
     public class RelBuilder
     {

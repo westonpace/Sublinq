@@ -1,4 +1,4 @@
-namespace DataLinq.Tests
+namespace SubLinq.Tests
 {
     public class SampleTable1
     {

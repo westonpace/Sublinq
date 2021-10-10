@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Type = Substrait.Protobuf.Type;
 
-namespace DataLinq
+namespace SubLinq
 {
     public static class TypeParser
     {

@@ -4,7 +4,7 @@ using Substrait.Protobuf;
 
 using Literal = Substrait.Protobuf.Expression.Types.Literal;
 
-namespace DataLinq.Tests
+namespace SubLinq.Tests
 {
     public class ExpressionParserTest
     {

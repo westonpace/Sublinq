@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DataLinq
+namespace SubLinq
 {
     internal static class TypeSystem
     {

@@ -5,7 +5,7 @@ using Expr = System.Linq.Expressions.Expression;
 using Expression = Substrait.Protobuf.Expression;
 using Type = Substrait.Protobuf.Type;
 
-namespace DataLinq
+namespace SubLinq
 {
     public class SubstraitExpressionVisitor
     {

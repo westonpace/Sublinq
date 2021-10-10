@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Substrait.Protobuf;
 
-namespace DataLinq.Tests
+namespace SubLinq.Tests
 {
     public class TypeParserTest
     {

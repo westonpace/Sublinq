@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Substrait.Protobuf;
 
-namespace DataLinq
+namespace SubLinq
 {
     public class PlanBuilder
     {

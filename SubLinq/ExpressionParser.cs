@@ -5,7 +5,7 @@ using Expression = System.Linq.Expressions.Expression;
 using Literal = Substrait.Protobuf.Expression.Types.Literal;
 using SubstraitExpression = Substrait.Protobuf.Expression;
 
-namespace DataLinq
+namespace SubLinq
 {
     public static class ExpressionParser
     {
