@@ -43,11 +43,8 @@ namespace SubLinq
                     $"Unrecognized constant type {constExpr.Type}.  The only constant allowed at the Rel level is a source query");
             }
 
-            var localFiles = new ReadRel.Types.LocalFiles();
-            foreach (var path in substQuery.Paths)
-            {
-                localFiles.Items.Add(new ReadRel.Types.LocalFiles.Types.FileOrFiles { Format = ReadRel.Types.LocalFiles.Types.FileOrFiles.Types.Format.Parquet, UriPath = path});
-            }
+            var namedTable = new ReadRel.Types.NamedTable();
+            namedTable.Names.Add(substQuery.SourceTableName);
 
             return new Rel
             {
@@ -57,7 +54,7 @@ namespace SubLinq
                     Filter = SubstraitUtil.ExpressionTrue,
                     Projection = SubstraitUtil.DefaultProjection,
                     BaseSchema = substQuery.Schema,
-                    LocalFiles = localFiles
+                    NamedTable = namedTable
                 }
             };
         }

@@ -8,7 +8,7 @@ namespace SubLinq
 {
     public interface ISubstraitQuery
     {
-        public List<string> Paths { get; }
+        public string SourceTableName { get; }
         public Substrait.Protobuf.Type.Types.NamedStruct Schema { get; }
     }
     
@@ -16,21 +16,21 @@ namespace SubLinq
     {
         
         private readonly IQueryProvider _provider;
-        public List<string> Paths { get; init; }
+        public string SourceTableName { get; }
         public Substrait.Protobuf.Type.Types.NamedStruct Schema { get; init; }
 
-        public SubstraitQuery(IQueryProvider provider, List<string> paths)
+        public SubstraitQuery(IQueryProvider provider, string sourceTableName)
         {
             this._provider = provider;
-            Paths = paths;
+            SourceTableName = sourceTableName;
             Schema = TypeParser.SchemaFromType(typeof(T));
             Expression = Expression.Constant(this);
         }
 
-        public SubstraitQuery(IQueryProvider provider, Expression expression, List<string> paths)
+        public SubstraitQuery(IQueryProvider provider, Expression expression, string sourceTableName)
         {
             this._provider = provider;
-            Paths = paths;
+            SourceTableName = sourceTableName;
             Schema = TypeParser.SchemaFromType(typeof(T));
             Expression = expression;
         }

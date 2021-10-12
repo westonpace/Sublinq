@@ -16,7 +16,7 @@ namespace SubLinq.Tests
         {
             var substraitQueryProvider = new SubstraitQueryProvider(TypeParser.SchemaFromType<SampleTable1>());
             var substraitQuery =
-                new SubstraitQuery<SampleTable1>(substraitQueryProvider, new List<string>() {"foo.parquet"});
+                new SubstraitQuery<SampleTable1>(substraitQueryProvider, "myTable");
             var result = substraitQuery.Where(t => t.foo < 3).ToList();
         }
     }

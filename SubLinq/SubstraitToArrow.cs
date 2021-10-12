@@ -10,11 +10,19 @@ using Expression = SubLinq.ArrowIr.Expression;
 using Field = SubLinq.ArrowIr.Arrow.Field;
 using Schema = SubLinq.ArrowIr.Arrow.Schema;
 using Type = Substrait.Protobuf.Type;
+using System.IO;
+using System.Collections.Generic;
 
 namespace SubLinq
 {
+
     public class SubstraitToArrow
     {
+        public static readonly Dictionary<ulong, string> FunctionIdsToArrowName = new Dictionary<ulong, string>()
+        {
+            {1, "LessThan"}
+        };
+
         private readonly FlatBufferBuilder _builder;
 
         public SubstraitToArrow()
@@ -22,18 +30,24 @@ namespace SubLinq
             _builder = new FlatBufferBuilder(1024 * 1024);
         }
 
+        public void Write()
+        {
+            File.WriteAllBytes("C:\\Temp\\foo.bin", _builder.DataBuffer.ToSizedArray());
+        }
+
         public Offset<Relation> VisitRel(Rel rel)
         {
-            Relation.StartRelation(_builder);
             switch (rel.RelTypeCase)
             {
                 case Rel.RelTypeOneofCase.Read:
                     var source = VisitRead(rel.Read);
+                    Relation.StartRelation(_builder);
                     Relation.AddImplType(_builder, RelationImpl.Source);
                     Relation.AddImpl(_builder, source.Value);
                     break;
                 case Rel.RelTypeOneofCase.Filter:
                     var filter = VisitFilter(rel.Filter);
+                    Relation.StartRelation(_builder);
                     Relation.AddImplType(_builder, RelationImpl.Filter);
                     Relation.AddImpl(_builder, filter.Value);
                     break;
@@ -47,27 +61,54 @@ namespace SubLinq
 
         private Offset<Filter> VisitFilter(FilterRel filter)
         {
+            var base_ = VisitRelCommon(filter.Common);
+            var rel = VisitRel(filter.Input);
+            var predicate = VisitExpression(filter.Condition);
             Filter.StartFilter(_builder);
-            Filter.AddBase(_builder, VisitRelCommon(filter.Common));
-            Filter.AddRel(_builder, VisitRel(filter.Input));
-            Filter.AddPredicate(_builder, VisitExpression(filter.Condition));
+            Filter.AddBase(_builder, base_);
+            Filter.AddRel(_builder, rel);
+            Filter.AddPredicate(_builder, predicate);
             return Filter.EndFilter(_builder);
         }
 
         private Offset<Expression> VisitExpression(Substrait.Protobuf.Expression expression)
         {
-            Expression.StartExpression(_builder);
+            ExpressionImpl implType;
+            int impl;
             switch (expression.RexTypeCase)
             {
                 case Substrait.Protobuf.Expression.RexTypeOneofCase.Literal:
-                    Expression.AddImplType(_builder, ExpressionImpl.Literal);
-                    Expression.AddImpl(_builder, VisitLiteral(expression.Literal).Value);
+                    implType = ExpressionImpl.Literal;
+                    impl = VisitLiteral(expression.Literal).Value;
+                    break;
+                case Substrait.Protobuf.Expression.RexTypeOneofCase.ScalarFunction:
+                    implType = ExpressionImpl.Call;
+                    impl = VisitScalarFunction(expression.ScalarFunction).Value;
                     break;
                 default:
                     throw new NotImplementedException(
                         $"Substrait->Arrow conversion not supported for expression type {expression.RexTypeCase}");
             }
+            Expression.StartExpression(_builder);
+            Expression.AddImplType(_builder, implType);
+            Expression.AddImpl(_builder, impl);
             return Expression.EndExpression(_builder);
+        }
+
+        private Offset<Call> VisitScalarFunction(Substrait.Protobuf.Expression.Types.ScalarFunction func)
+        {
+            var nameStr = FunctionIdsToArrowName[func.Id.Id];
+            var name = _builder.CreateString(nameStr);
+            var args = new Offset<Expression>[func.Args.Count];
+            var orderings = new Offset<SortKey>[0];
+
+            var argsVector = Call.CreateArgumentsVector(_builder, args);
+            var orderingsVector = Call.CreateOrderingsVector(_builder, orderings);
+            Call.StartCall(_builder);
+            Call.AddName(_builder, name);
+            Call.AddArguments(_builder, argsVector);
+            Call.AddOrderings(_builder, orderingsVector);
+            return Call.EndCall(_builder);
         }
 
         private Offset<Literal> VisitLiteral(Substrait.Protobuf.Expression.Types.Literal literal)
@@ -185,8 +226,6 @@ namespace SubLinq
         
         private Offset<Source> VisitRead(ReadRel read)
         {
-            Source.StartSource(_builder);
-            Source.AddBase(_builder, VisitRelCommon(read.Common));
             if (read.NamedTable == null)
             {
                 throw new NotImplementedException("The Arrow query engine only supports named data sources");
@@ -200,14 +239,19 @@ namespace SubLinq
                     throw new Exception("Cannot convert a NamedTable that has multiple names");
             }
 
-            Source.AddName(_builder, _builder.CreateString(read.NamedTable.Names[0]));
-            Source.AddSchema(_builder, VisitSchema(read.BaseSchema));
+            var base_ = VisitRelCommon(read.Common);
+            var name = _builder.CreateString(read.NamedTable.Names[0]);
+            var schema = VisitSchema(read.BaseSchema);
+
+            Source.StartSource(_builder);
+            Source.AddBase(_builder, base_);
+            Source.AddName(_builder, name);
+            Source.AddSchema(_builder, schema);
             return Source.EndSource(_builder);
         }
 
         private Offset<Schema> VisitSchema(Type.Types.NamedStruct schema)
         {
-            Schema.StartSchema(_builder);
             if (schema.Names == null || schema.Struct.Types_ == null ||
                 schema.Names.Count != schema.Struct.Types_.Count)
             {
@@ -219,66 +263,74 @@ namespace SubLinq
             {
                 var fieldName = schema.Names[i];
                 var type = schema.Struct.Types_[i];
-                Field.StartField(_builder);
-                Field.AddName(_builder, _builder.CreateString(fieldName));
+                var name = _builder.CreateString(fieldName);
+                int typeTypeOffset = -1;
+                bool nullable = true;
+                ArrowIr.Arrow.Type typeType = ArrowIr.Arrow.Type.NONE;
                 switch (type.KindCase)
                 {
                     case Type.KindOneofCase.Binary:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Binary);
-                        Field.AddType(_builder, CreateBinary().Value);
-                        Field.AddNullable(_builder, type.Binary.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateBinary().Value;
+                        typeType = ArrowIr.Arrow.Type.Binary;
+                        nullable = type.Binary.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.Bool:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Bool);
-                        Field.AddType(_builder, CreateBool().Value);
-                        Field.AddNullable(_builder, type.Bool.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateBool().Value;
+                        typeType = ArrowIr.Arrow.Type.Bool;
+                        nullable = type.Bool.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.Fp32:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.FloatingPoint);
-                        Field.AddType(_builder, CreateFloat().Value);
-                        Field.AddNullable(_builder, type.Fp32.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateFloat().Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.FloatingPoint;
+                        nullable = type.Fp32.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.Fp64:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.FloatingPoint);
-                        Field.AddType(_builder, CreateDouble().Value);
-                        Field.AddNullable(_builder, type.Fp64.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateDouble().Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.FloatingPoint;
+                        nullable = type.Fp64.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.I8:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
-                        Field.AddType(_builder, CreateSignedInt(8).Value);
-                        Field.AddNullable(_builder, type.I8.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateSignedInt(8).Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.Int;
+                        nullable = type.I8.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.I16:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
-                        Field.AddType(_builder, CreateSignedInt(16).Value);
-                        Field.AddNullable(_builder, type.I16.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateSignedInt(16).Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.Int;
+                        nullable = type.I16.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.I32:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
-                        Field.AddType(_builder, CreateSignedInt(32).Value);
-                        Field.AddNullable(_builder, type.I32.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateSignedInt(32).Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.Int;
+                        nullable = type.I32.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.I64:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Int);
-                        Field.AddType(_builder, CreateSignedInt(64).Value);
-                        Field.AddNullable(_builder, type.I64.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateSignedInt(64).Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.Int;
+                        nullable = type.I64.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.String:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Utf8);
-                        Field.AddType(_builder, CreateString().Value);
-                        Field.AddNullable(_builder, type.String.Nullability != Type.Types.Nullability.Required);
+                        typeTypeOffset = CreateString().Value;
+                        typeType = SubLinq.ArrowIr.Arrow.Type.Utf8;
+                        nullable = type.String.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.Struct:
-                        Field.AddTypeType(_builder, SubLinq.ArrowIr.Arrow.Type.Struct_);
+                        typeType = SubLinq.ArrowIr.Arrow.Type.Struct_;
                         throw new Exception("TO-DO");
                     default:
                         throw new NotImplementedException(
                             "Conversion from substrait type to Arrow type not implemented");
                 }
-
+                Field.StartField(_builder);
+                Field.AddName(_builder, name);
+                Field.AddTypeType(_builder, typeType);
+                Field.AddType(_builder, typeTypeOffset);
+                Field.AddNullable(_builder, nullable);
                 fields[i] = Field.EndField(_builder);
             }
-            Schema.CreateFieldsVector(_builder, fields);
+            var fieldsVector = Schema.CreateFieldsVector(_builder, fields);
+            Schema.StartSchema(_builder);
+            Schema.AddFields(_builder, fieldsVector);
             return Schema.EndSchema(_builder);
         }
 
@@ -324,16 +376,19 @@ namespace SubLinq
 
         private Offset<RelBase> VisitRelCommon(RelCommon common)
         {
-            RelBase.StartRelBase(_builder);
             switch (common.KindCase)
             {
                 case RelCommon.KindOneofCase.Direct:
+                    var outputMapping = VisitDirect(common.Direct).Value;
+                    RelBase.StartRelBase(_builder);
                     RelBase.AddOutputMappingType(_builder, Emit.PassThrough);
-                    RelBase.AddOutputMapping(_builder, VisitDirect(common.Direct).Value);
+                    RelBase.AddOutputMapping(_builder, outputMapping);
                     break;
                 case RelCommon.KindOneofCase.Emit:
+                    outputMapping = VisitEmit(common.Emit).Value;
+                    RelBase.StartRelBase(_builder);
                     RelBase.AddOutputMappingType(_builder, Emit.Remap);
-                    RelBase.AddOutputMapping(_builder, VisitEmit(common.Emit).Value);
+                    RelBase.AddOutputMapping(_builder, outputMapping);
                     break;
                 default:
                     throw new Exception(

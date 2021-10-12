@@ -19,6 +19,9 @@ namespace SubLinq
             var expressionVisitor = new SubstraitExpressionVisitor(schema);
             var rel = expressionVisitor.VisitRel(expression);
             Console.WriteLine(rel);
+            SubstraitToArrow substraitToArrow = new SubstraitToArrow();
+            substraitToArrow.VisitRel(rel);
+            substraitToArrow.Write();
             throw new Exception();
         }
     }
