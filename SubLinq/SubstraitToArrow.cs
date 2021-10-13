@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using Apache.Arrow;
 using SubLinq.ArrowIr;
 using SubLinq.ArrowIr.Arrow;
 using FlatBuffers;
@@ -10,57 +9,96 @@ using Expression = SubLinq.ArrowIr.Expression;
 using Field = SubLinq.ArrowIr.Arrow.Field;
 using Schema = SubLinq.ArrowIr.Arrow.Schema;
 using Type = Substrait.Protobuf.Type;
-using System.IO;
 using System.Collections.Generic;
+using Array = System.Array;
+using Plan = SubLinq.ArrowIr.Plan;
 
 namespace SubLinq
 {
 
     public class SubstraitToArrow
     {
-        public static readonly Dictionary<ulong, string> FunctionIdsToArrowName = new Dictionary<ulong, string>()
+        private static readonly Dictionary<ulong, string> FunctionIdsToArrowName = new()
         {
-            {1, "LessThan"}
+            {1, "less"}
         };
 
         private readonly FlatBufferBuilder _builder;
 
-        public SubstraitToArrow()
+        private SubstraitToArrow()
         {
             _builder = new FlatBufferBuilder(1024 * 1024);
         }
-
-        public void Write()
+        
+        public static byte[] Convert(Rel rel)
         {
-            File.WriteAllBytes("C:\\Temp\\foo.bin", _builder.DataBuffer.ToSizedArray());
+            SubstraitToArrow converter = new();
+            var outputRel = converter.VisitRootRel(rel);
+            converter._builder.Finish(outputRel.Value);
+            return converter._builder.DataBuffer.ToSizedArray();
         }
 
-        public Offset<Relation> VisitRel(Rel rel)
+        private Offset<Plan> VisitRootRel(Rel rel)
         {
+            var sinks = new Offset<Relation>[1];
+            sinks[0] = VisitRel(rel);
+            var sinksVector = Plan.CreateSinksVector(_builder, sinks);
+            Plan.StartPlan(_builder);
+            Plan.AddSinks(_builder, sinksVector);
+            return Plan.EndPlan(_builder);
+        }
+        
+        private Offset<Relation> VisitRel(Rel rel)
+        {
+            RelationImpl implType;
+            int impl;
             switch (rel.RelTypeCase)
             {
                 case Rel.RelTypeOneofCase.Read:
-                    var source = VisitRead(rel.Read);
-                    Relation.StartRelation(_builder);
-                    Relation.AddImplType(_builder, RelationImpl.Source);
-                    Relation.AddImpl(_builder, source.Value);
+                    implType = RelationImpl.Source;
+                    impl = VisitRead(rel.Read).Value;
                     break;
                 case Rel.RelTypeOneofCase.Filter:
-                    var filter = VisitFilter(rel.Filter);
-                    Relation.StartRelation(_builder);
-                    Relation.AddImplType(_builder, RelationImpl.Filter);
-                    Relation.AddImpl(_builder, filter.Value);
+                    implType = RelationImpl.Filter;
+                    impl = VisitFilter(rel.Filter).Value;
+                    break;
+                case Rel.RelTypeOneofCase.Project:
+                    implType = RelationImpl.Project;
+                    impl = VisitProject(rel.Project).Value;
                     break;
                 default:
                     throw new NotImplementedException(
                         $"Substrait->Arrow conversion does not handle relation type {rel.RelTypeCase}");
             }
 
+            Relation.StartRelation(_builder);
+            Relation.AddImplType(_builder, implType);
+            Relation.AddImpl(_builder, impl);
             return Relation.EndRelation(_builder);
+        }
+
+        private Offset<Project> VisitProject(ProjectRel project)
+        {
+            // ReSharper disable once InconsistentNaming
+            var base_ = VisitRelCommon(project.Common);
+            var rel = VisitRel(project.Input);
+            Offset<Expression>[] exprs = new Offset<Expression>[project.Expressions.Count];
+            for (int i = 0; i < project.Expressions.Count; i++)
+            {
+                exprs[i] = VisitExpression(project.Expressions[i]);
+            }
+
+            VectorOffset exprsVector = Project.CreateExpressionsVector(_builder, exprs);
+            Project.StartProject(_builder);
+            Project.AddBase(_builder, base_);
+            Project.AddRel(_builder, rel);
+            Project.AddExpressions(_builder, exprsVector);
+            return Project.EndProject(_builder);
         }
 
         private Offset<Filter> VisitFilter(FilterRel filter)
         {
+            // ReSharper disable once InconsistentNaming
             var base_ = VisitRelCommon(filter.Common);
             var rel = VisitRel(filter.Input);
             var predicate = VisitExpression(filter.Condition);
@@ -85,6 +123,10 @@ namespace SubLinq
                     implType = ExpressionImpl.Call;
                     impl = VisitScalarFunction(expression.ScalarFunction).Value;
                     break;
+                case Substrait.Protobuf.Expression.RexTypeOneofCase.Selection:
+                    implType = ExpressionImpl.FieldRef;
+                    impl = VisitFieldReference(expression.Selection).Value;
+                    break;
                 default:
                     throw new NotImplementedException(
                         $"Substrait->Arrow conversion not supported for expression type {expression.RexTypeCase}");
@@ -95,13 +137,59 @@ namespace SubLinq
             return Expression.EndExpression(_builder);
         }
 
+        private Offset<FieldRef> VisitFieldReference(FieldReference fieldRef)
+        {
+            switch (fieldRef.ReferenceTypeCase)
+            {
+                case FieldReference.ReferenceTypeOneofCase.DirectReference:
+                    return VisitReferenceSegment(fieldRef.DirectReference);
+                default:
+                    throw new NotImplementedException(
+                        $"Substrait->Arrow conversion not supported for field reference type {fieldRef.ReferenceTypeCase}");
+            }
+        }
+
+        private Offset<FieldRef> VisitReferenceSegment(ReferenceSegment referenceSegment)
+        {
+            Deref refType;
+            int refValue;
+            switch (referenceSegment.ReferenceTypeCase)
+            {
+                case ReferenceSegment.ReferenceTypeOneofCase.StructField:
+                    refType = Deref.FieldIndex;
+                    refValue = VisitStructFieldReference(referenceSegment.StructField).Value;
+                    break;
+                default:
+                    throw new NotImplementedException(
+                        $"Substrait->Arrow conversion not supported for reference type {referenceSegment.ReferenceTypeCase}");
+            }
+            FieldRef.StartFieldRef(_builder);
+            // TODO
+            FieldRef.AddRelationIndex(_builder, 0);
+            FieldRef.AddRefType(_builder, refType);
+            FieldRef.AddRef(_builder, refValue);
+            return FieldRef.EndFieldRef(_builder);
+        }
+
+        private Offset<FieldIndex> VisitStructFieldReference(Substrait.Protobuf.ReferenceSegment.Types.StructField structField)
+        {
+            FieldIndex.StartFieldIndex(_builder);
+            FieldIndex.AddPosition(_builder, (uint)structField.Field);
+            return FieldIndex.EndFieldIndex(_builder);
+        }
+
         private Offset<Call> VisitScalarFunction(Substrait.Protobuf.Expression.Types.ScalarFunction func)
         {
             var nameStr = FunctionIdsToArrowName[func.Id.Id];
             var name = _builder.CreateString(nameStr);
             var args = new Offset<Expression>[func.Args.Count];
-            var orderings = new Offset<SortKey>[0];
+            var orderings = Array.Empty<Offset<SortKey>>();
 
+            for (int i = 0; i < func.Args.Count; i++)
+            {
+                args[i] = VisitExpression(func.Args[i]);
+            }
+            
             var argsVector = Call.CreateArgumentsVector(_builder, args);
             var orderingsVector = Call.CreateOrderingsVector(_builder, orderings);
             Call.StartCall(_builder);
@@ -113,50 +201,54 @@ namespace SubLinq
 
         private Offset<Literal> VisitLiteral(Substrait.Protobuf.Expression.Types.Literal literal)
         {
-            Literal.StartLiteral(_builder);
+            LiteralImpl implType;
+            int impl;
             switch (literal.LiteralTypeCase)
             {
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.Binary:
-                    Literal.AddImplType(_builder, LiteralImpl.BinaryLiteral);
-                    Literal.AddImpl(_builder, CreateBinaryLiteral(literal.Binary).Value);
+                    implType = LiteralImpl.BinaryLiteral;
+                    impl = CreateBinaryLiteral(literal.Binary).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.Boolean:
-                    Literal.AddImplType(_builder, LiteralImpl.BooleanLiteral);
-                    Literal.AddImpl(_builder, CreateBooleanLiteral(literal.Boolean).Value);
+                    implType = LiteralImpl.BooleanLiteral;
+                    impl = CreateBooleanLiteral(literal.Boolean).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.Fp32:
-                    Literal.AddImplType(_builder, LiteralImpl.Float32Literal);
-                    Literal.AddImpl(_builder, CreateFloat32Literal(literal.Fp32).Value);
+                    implType = LiteralImpl.Float32Literal;
+                    impl = CreateFloat32Literal(literal.Fp32).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.Fp64:
-                    Literal.AddImplType(_builder, LiteralImpl.Float64Literal);
-                    Literal.AddImpl(_builder, CreateFloat64Literal(literal.Fp64).Value);
+                    implType = LiteralImpl.Float64Literal;
+                    impl = CreateFloat64Literal(literal.Fp64).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.I8:
-                    Literal.AddImplType(_builder, LiteralImpl.Int8Literal);
-                    Literal.AddImpl(_builder, CreateInt8Literal(literal.I8).Value);
+                    implType = LiteralImpl.Int8Literal;
+                    impl = CreateInt8Literal(literal.I8).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.I16:
-                    Literal.AddImplType(_builder, LiteralImpl.Int16Literal);
-                    Literal.AddImpl(_builder, CreateInt16Literal(literal.I16).Value);
+                    implType = LiteralImpl.Int16Literal;
+                    impl = CreateInt16Literal(literal.I16).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.I32:
-                    Literal.AddImplType(_builder, LiteralImpl.Int32Literal);
-                    Literal.AddImpl(_builder, CreateInt32Literal(literal.I32).Value);
+                    implType = LiteralImpl.Int32Literal;
+                    impl = CreateInt32Literal(literal.I32).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.I64:
-                    Literal.AddImplType(_builder, LiteralImpl.Int64Literal);
-                    Literal.AddImpl(_builder, CreateInt64Literal(literal.I64).Value);
+                    implType = LiteralImpl.Int64Literal;
+                    impl = CreateInt64Literal(literal.I64).Value;
                     break;
                 case Substrait.Protobuf.Expression.Types.Literal.LiteralTypeOneofCase.String:
-                    Literal.AddImplType(_builder, LiteralImpl.StringLiteral);
-                    Literal.AddImpl(_builder, CreateStringLiteral(literal.String).Value);
+                    implType = LiteralImpl.StringLiteral;
+                    impl = CreateStringLiteral(literal.String).Value;
                     break;
                 default:
                     throw new NotImplementedException(
                         $"Substrait->Arrow conversion not supported for literal type {literal.LiteralTypeCase}");
             }
 
+            Literal.StartLiteral(_builder);
+            Literal.AddImplType(_builder, implType);
+            Literal.AddImpl(_builder, impl);
             return Literal.EndLiteral(_builder);
         }
 
@@ -239,6 +331,7 @@ namespace SubLinq
                     throw new Exception("Cannot convert a NamedTable that has multiple names");
             }
 
+            // ReSharper disable once InconsistentNaming
             var base_ = VisitRelCommon(read.Common);
             var name = _builder.CreateString(read.NamedTable.Names[0]);
             var schema = VisitSchema(read.BaseSchema);
@@ -264,9 +357,9 @@ namespace SubLinq
                 var fieldName = schema.Names[i];
                 var type = schema.Struct.Types_[i];
                 var name = _builder.CreateString(fieldName);
-                int typeTypeOffset = -1;
-                bool nullable = true;
-                ArrowIr.Arrow.Type typeType = ArrowIr.Arrow.Type.NONE;
+                int typeTypeOffset;
+                bool nullable;
+                ArrowIr.Arrow.Type typeType;
                 switch (type.KindCase)
                 {
                     case Type.KindOneofCase.Binary:
@@ -315,7 +408,6 @@ namespace SubLinq
                         nullable = type.String.Nullability != Type.Types.Nullability.Required;
                         break;
                     case Type.KindOneofCase.Struct:
-                        typeType = SubLinq.ArrowIr.Arrow.Type.Struct_;
                         throw new Exception("TO-DO");
                     default:
                         throw new NotImplementedException(

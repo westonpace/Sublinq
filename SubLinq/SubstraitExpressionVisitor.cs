@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Substrait.Protobuf;
 using Expr = System.Linq.Expressions.Expression;
@@ -159,9 +161,38 @@ namespace SubLinq
             {
                 case "Where":
                     return VisitWhere(methodCall);
+                case "Select":
+                    return VisitSelect(methodCall);
                 default:
                     throw new Exception($"Unrecognized method call {methodCall.Method.Name} in expression");
             }
+        }
+
+        protected Rel VisitSelect(MethodCallExpression methodCall)
+        {
+            if (methodCall.Arguments.Count != 2)
+            {
+                throw new Exception("Unexpected number of arguments in select call");
+            }
+
+            Rel source = VisitRel(methodCall.Arguments[0]);
+            Expr projection = EnsureUnquoted(methodCall.Arguments[1]);
+            if (projection is NewExpression newExpr)
+            {
+                List<Expression> expressions = newExpr.Arguments.Select(VisitExpression).ToList();
+                ProjectRel projectRel = new()
+                {
+                    Common = SubstraitUtil.SimpleRelCommon,
+                    Input = source
+                };
+                projectRel.Expressions.AddRange(expressions);
+                return new Rel
+                {
+                    Project = projectRel
+                };
+            }
+
+            throw new Exception("Projection expression was not a new expression");
         }
 
     }
