@@ -3,13 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubLinq", "SubLinq\SubLinq.csproj", "{2BDDFFA0-DEAE-44F9-8F84-16CEAAC23807}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubLinq", "SubLinq\SubLinq.csproj", "{2BDDFFA0-DEAE-44F9-8F84-16CEAAC23807}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubLinq.Tests", "SubLinq.Tests\SubLinq.Tests.csproj", "{2E65D168-BDAF-4C79-A9BF-C1935481A943}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubLinq.Tests", "SubLinq.Tests\SubLinq.Tests.csproj", "{2E65D168-BDAF-4C79-A9BF-C1935481A943}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Substrait", "Substrait\Substrait.csproj", "{15FF00CC-9670-4FAB-B47D-5C48FBB94CDD}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArrowIr", "ArrowIr\ArrowIr.csproj", "{54944B39-486F-4D52-857B-0C80674C62D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Substrait", "Substrait\Substrait.csproj", "{15FF00CC-9670-4FAB-B47D-5C48FBB94CDD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Submodules", "Submodules", "{E7204055-A5B4-49B7-9F9C-7BB84AA2A214}"
 EndProject
@@ -27,9 +25,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{2BDDFFA0-DEAE-44F9-8F84-16CEAAC23807}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -68,18 +63,6 @@ Global
 		{15FF00CC-9670-4FAB-B47D-5C48FBB94CDD}.Release|x64.Build.0 = Release|Any CPU
 		{15FF00CC-9670-4FAB-B47D-5C48FBB94CDD}.Release|x86.ActiveCfg = Release|Any CPU
 		{15FF00CC-9670-4FAB-B47D-5C48FBB94CDD}.Release|x86.Build.0 = Release|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Debug|x64.Build.0 = Debug|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Debug|x86.Build.0 = Debug|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Release|x64.ActiveCfg = Release|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Release|x64.Build.0 = Release|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Release|x86.ActiveCfg = Release|Any CPU
-		{54944B39-486F-4D52-857B-0C80674C62D8}.Release|x86.Build.0 = Release|Any CPU
 		{0F10A15A-128D-491A-AA10-D11B7203B8A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0F10A15A-128D-491A-AA10-D11B7203B8A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0F10A15A-128D-491A-AA10-D11B7203B8A4}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -93,9 +76,15 @@ Global
 		{0F10A15A-128D-491A-AA10-D11B7203B8A4}.Release|x86.ActiveCfg = Release|Any CPU
 		{0F10A15A-128D-491A-AA10-D11B7203B8A4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{21FEFDC1-680A-47C6-9524-8F07A52C90DD} = {E7204055-A5B4-49B7-9F9C-7BB84AA2A214}
 		{EA11917B-9539-4434-93D4-E3886E516DEF} = {21FEFDC1-680A-47C6-9524-8F07A52C90DD}
 		{0F10A15A-128D-491A-AA10-D11B7203B8A4} = {EA11917B-9539-4434-93D4-E3886E516DEF}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {23035425-9429-4B72-B4C4-A404FF8E776A}
 	EndGlobalSection
 EndGlobal

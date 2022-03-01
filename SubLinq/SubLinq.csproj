@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ArrowIr\ArrowIr.csproj" />
     <ProjectReference Include="..\Substrait\Substrait.csproj" />
   </ItemGroup>
 
