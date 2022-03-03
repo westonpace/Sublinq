@@ -51,7 +51,7 @@ namespace SubLinq
                     return new Literal {String = s};
                 case byte[] b:
                     return new Literal {Binary = ByteString.CopyFrom(b)};
-                case DateTime:
+                case DateTime d:
                     throw new Exception("I don't want to figure this out yet");
                 default:
                     throw new Exception($"Cannot convert literal of type {value?.GetType()} to Substrait literal");

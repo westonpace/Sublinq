@@ -10,9 +10,9 @@ namespace SubLinq.Tests
     {
         class TestObject
         {
-            public sbyte MySbyte { get; init; }
-            public byte MyByte { get; init; }
-            public int MyInt { get; init; }
+            public sbyte MySbyte { get; private set; }
+            public byte MyByte { get; private set; }
+            public int MyInt { get; private set; }
         }
 
         [Test]

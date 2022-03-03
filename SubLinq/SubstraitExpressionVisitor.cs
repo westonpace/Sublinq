@@ -180,7 +180,7 @@ namespace SubLinq
             if (projection is NewExpression newExpr)
             {
                 List<Expression> expressions = newExpr.Arguments.Select(VisitExpression).ToList();
-                ProjectRel projectRel = new()
+                ProjectRel projectRel = new ProjectRel
                 {
                     Common = SubstraitUtil.SimpleRelCommon,
                     Input = source

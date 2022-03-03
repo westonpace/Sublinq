@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Reflection;
 using Type = Substrait.Protobuf.Type;
 
 namespace SubLinq
@@ -54,7 +54,7 @@ namespace SubLinq
             {
                 return csharpTypeToSubstraitType[t];
             }
-            if (t.IsValueType)
+            if (t.GetTypeInfo().IsValueType)
             {
                 throw new Exception($"Type {t} cannot be mapped to a Substrait type");
             }

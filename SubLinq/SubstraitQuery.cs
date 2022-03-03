@@ -17,7 +17,7 @@ namespace SubLinq
         
         private readonly IQueryProvider _provider;
         public string SourceTableName { get; }
-        public Substrait.Protobuf.Type.Types.NamedStruct Schema { get; init; }
+        public Substrait.Protobuf.Type.Types.NamedStruct Schema { get; private set; }
 
         public SubstraitQuery(IQueryProvider provider, string sourceTableName)
         {
@@ -51,7 +51,7 @@ namespace SubLinq
         }
 
         public Type ElementType { get; } = typeof(T);
-        public Expression Expression { get; init; }
+        public Expression Expression { get; private set; }
 
         public IQueryProvider Provider => _provider;
     }

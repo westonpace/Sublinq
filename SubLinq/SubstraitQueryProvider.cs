@@ -20,9 +20,6 @@ namespace SubLinq
             var expressionVisitor = new SubstraitExpressionVisitor(schema);
             var rel = expressionVisitor.VisitRel(expression);
             Console.WriteLine(rel);
-            byte[] bytes = SubstraitToArrow.Convert(rel);
-            Console.WriteLine("Output bytes: " + bytes.Length);
-            File.WriteAllBytes("/tmp/foo.plan", bytes);
             throw new Exception();
         }
     }
