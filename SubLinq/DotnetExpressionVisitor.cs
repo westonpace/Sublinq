@@ -5,27 +5,26 @@ using System.Linq.Expressions;
 using Substrait.Protobuf;
 using Expr = System.Linq.Expressions.Expression;
 using Expression = Substrait.Protobuf.Expression;
-using Type = Substrait.Protobuf.Type;
 
 namespace SubLinq
 {
-    public class SubstraitExpressionVisitor
+    public class DotnetExpressionVisitor
     {
-        private Type.Types.NamedStruct schema;
-        
-        public SubstraitExpressionVisitor(Type.Types.NamedStruct schema)
+        private NamedStruct? currentSchema;
+
+        public Rel VisitDotnetExpression(Expr? expr)
         {
-            this.schema = schema;
+            return VisitRel(expr);
         }
 
-        public Rel VisitRel(Expr? expr)
+        private Rel VisitRel(Expr? expr)
         {
             switch (expr)
             {
                 case MethodCallExpression methodCall:
                     return VisitMethodCall(methodCall);
                 case ConstantExpression constCall:
-                    return VisitSourceCall(constCall);
+                    return VisitConstantExpression(constCall);
                 default:
                     throw new Exception("Unrecognized node type when expecting a Rel");
             }
@@ -33,42 +32,30 @@ namespace SubLinq
 
         private int FieldIndex(string fieldName)
         {
-            return schema.Names.IndexOf(fieldName);
+            return currentSchema!.Names.IndexOf(fieldName);
         }
-        
-        private Rel VisitSourceCall(ConstantExpression constExpr)
+
+        private Rel VisitConstantExpression(ConstantExpression constExpr)
         {
-            var substQuery = constExpr.Value as ISubstraitQuery;
+            var substQuery = constExpr.Value as SubstraitSource;
             if (substQuery == null)
             {
                 throw new Exception(
-                    $"Unrecognized constant type {constExpr.Type}.  The only constant allowed at the Rel level is a source query");
+                    $"Unrecognized constant type {constExpr.Type}.  The only constant allowed at the Rel level is a source.");
             }
 
-            var namedTable = new ReadRel.Types.NamedTable();
-            namedTable.Names.Add(substQuery.SourceTableName);
-
-            return new Rel
-            {
-                Read = new ReadRel
-                {
-                    Common = SubstraitUtil.SimpleRelCommon,
-                    Filter = SubstraitUtil.ExpressionTrue,
-                    Projection = SubstraitUtil.DefaultProjection,
-                    BaseSchema = substQuery.Schema,
-                    NamedTable = namedTable
-                }
-            };
+            currentSchema = substQuery.OutputSchema;
+            return substQuery.Rel;
         }
 
-        private Expression VisitComparisonFunction(BinaryExpression expr, ulong funcId)
+        private Expression VisitComparisonFunction(BinaryExpression expr, uint funcId)
         {
             Expression leftArg = VisitExpression(expr.Left);
             Expression rightArg = VisitExpression(expr.Right);
             var func = new Expression.Types.ScalarFunction
             {
-                Id = new Extensions.Types.FunctionId { Id = funcId },
-                OutputType = new Substrait.Protobuf.Type {Bool = { }}
+                FunctionReference = funcId,
+                OutputType = new Substrait.Protobuf.Type { Bool = { } }
             };
             func.Args.Add(leftArg);
             func.Args.Add(rightArg);
@@ -82,11 +69,11 @@ namespace SubLinq
         {
             return new Expression
             {
-                Selection = new FieldReference
+                Selection = new Substrait.Protobuf.Expression.Types.FieldReference
                 {
-                    DirectReference = new ReferenceSegment
+                    DirectReference = new Substrait.Protobuf.Expression.Types.ReferenceSegment
                     {
-                        StructField = new ReferenceSegment.Types.StructField
+                        StructField = new Substrait.Protobuf.Expression.Types.ReferenceSegment.Types.StructField
                         {
                             Field = FieldIndex(expr.Member.Name)
                         }
@@ -99,10 +86,10 @@ namespace SubLinq
         {
             return new Expression
             {
-                Literal = ExpressionParser.ParseLiteral(expr.Value)
+                Literal = LiteralParser.ParseLiteral(expr.Value)
             };
         }
-        
+
         private Expression VisitExpression(Expr quotedExpr)
         {
             var expr = EnsureUnquoted(quotedExpr);
@@ -128,16 +115,16 @@ namespace SubLinq
         {
             if (expr.NodeType == ExpressionType.Quote)
             {
-                return EnsureUnquoted(((UnaryExpression) expr).Operand);
+                return EnsureUnquoted(((UnaryExpression)expr).Operand);
             }
             if (expr.NodeType == ExpressionType.Lambda)
             {
-                return EnsureUnquoted(((LambdaExpression) expr).Body);
+                return EnsureUnquoted(((LambdaExpression)expr).Body);
             }
 
             return expr;
         }
-        
+
         protected Rel VisitWhere(MethodCallExpression methodCall)
         {
             var sourceExpr = methodCall.Arguments[0];
@@ -154,7 +141,7 @@ namespace SubLinq
                 }
             };
         }
-        
+
         protected Rel VisitMethodCall(MethodCallExpression methodCall)
         {
             switch (methodCall.Method.Name)

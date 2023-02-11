@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Substrait.Protobuf;
 using Type = Substrait.Protobuf.Type;
 
 namespace SubLinq
@@ -21,22 +22,22 @@ namespace SubLinq
             {typeof(float), new Type {Fp32 = new Type.Types.FP32()}},
             {typeof(double), new Type {Fp64 = new Type.Types.FP64()}},
             {typeof(string), new Type {String = new Type.Types.String()}},
-            {typeof(byte[]), new Type {Binary = new Type.Types.Binary()}},
+            {typeof(byte[]), new Type {Binary = new Type.Types.Binary()}}
         };
 
-        public static Type.Types.NamedStruct SchemaFromType<T>()
+        public static NamedStruct SchemaFromType<T>()
         {
             return StructFromObjectType(typeof(T));
         }
 
-        public static Type.Types.NamedStruct SchemaFromType(System.Type t)
+        public static NamedStruct SchemaFromType(System.Type t)
         {
             return StructFromObjectType(t);
         }
 
-        public static Type.Types.NamedStruct StructFromObjectType(System.Type t)
+        public static NamedStruct StructFromObjectType(System.Type t)
         {
-            var result = new Type.Types.NamedStruct();
+            var result = new NamedStruct();
             var struct_ = new Type.Types.Struct();
             foreach (var prop in t.GetProperties().Where(p => p.CanRead && p.CanWrite))
             {
@@ -58,7 +59,7 @@ namespace SubLinq
             {
                 throw new Exception($"Type {t} cannot be mapped to a Substrait type");
             }
-            return new Type {Struct = StructFromObjectType(t).Struct};
+            return new Type { Struct = StructFromObjectType(t).Struct };
         }
     }
 }

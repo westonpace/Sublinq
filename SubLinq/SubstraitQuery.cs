@@ -6,34 +6,23 @@ using System.Linq.Expressions;
 
 namespace SubLinq
 {
-    public interface ISubstraitQuery
+    public class SubstraitQuery<T> : IOrderedQueryable<T>
     {
-        public string SourceTableName { get; }
-        public Substrait.Protobuf.Type.Types.NamedStruct Schema { get; }
-    }
-    
-    public class SubstraitQuery<T> : IOrderedQueryable<T>, ISubstraitQuery
-    {
-        
+
         private readonly IQueryProvider _provider;
-        public string SourceTableName { get; }
-        public Substrait.Protobuf.Type.Types.NamedStruct Schema { get; private set; }
 
-        public SubstraitQuery(IQueryProvider provider, string sourceTableName)
+        public SubstraitQuery(IQueryProvider provider, SubstraitSource source)
         {
             this._provider = provider;
-            SourceTableName = sourceTableName;
-            Schema = TypeParser.SchemaFromType(typeof(T));
-            Expression = Expression.Constant(this);
+            Expression = Expression.Constant(source);
         }
 
-        public SubstraitQuery(IQueryProvider provider, Expression expression, string sourceTableName)
-        {
-            this._provider = provider;
-            SourceTableName = sourceTableName;
-            Schema = TypeParser.SchemaFromType(typeof(T));
-            Expression = expression;
-        }
+        // public SubstraitQuery(IQueryProvider provider, Expression expression)
+        // {
+        //     this._provider = provider;
+        //     Schema = TypeParser.SchemaFromType(typeof(T));
+        //     Expression = expression;
+        // }
 
         public IEnumerator<T> GetEnumerator()
         {

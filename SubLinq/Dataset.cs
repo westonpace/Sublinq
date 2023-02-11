@@ -11,14 +11,14 @@ namespace SubLinq
     public class Dataset<T>
     {
         public List<string> Paths { get; }
-        public Type.Types.NamedStruct Schema { get; }
+        public NamedStruct Schema { get; }
 
         public Dataset(List<string> paths)
         {
             Paths = paths;
             Schema = TypeParser.SchemaFromType<T>();
         }
-        
+
         public RelBuilder Read()
         {
             var localFiles = new ReadRel.Types.LocalFiles();
@@ -27,7 +27,7 @@ namespace SubLinq
                 localFiles.Items.Add(new ReadRel.Types.LocalFiles.Types.FileOrFiles
                 {
                     UriPath = path,
-                    Format = ReadRel.Types.LocalFiles.Types.FileOrFiles.Types.Format.Parquet
+                    Parquet = new ReadRel.Types.LocalFiles.Types.FileOrFiles.Types.ParquetReadOptions()
                 });
             }
             var readRel = new ReadRel
@@ -39,7 +39,7 @@ namespace SubLinq
                 LocalFiles = localFiles
             };
             var plan = new PlanBuilder();
-            var relBuilder = new RelBuilder(plan, new Rel {Read = readRel});
+            var relBuilder = new RelBuilder(plan, new PlanRel { Rel = new Rel { Read = readRel } });
             plan.AddRel(relBuilder);
             return relBuilder;
         }

@@ -7,18 +7,24 @@ namespace SubLinq
 {
     public abstract class BaseQueryProvider : IQueryProvider
     {
-        IQueryable IQueryProvider.CreateQuery(Expression expression) {
-            Type elementType = TypeSystem.GetElementType(expression.Type);
-            try {
+        IQueryable IQueryProvider.CreateQuery(Expression expression)
+        {
+            throw new NotImplementedException();
+            /*Type elementType = TypeSystem.GetElementType(expression.Type);
+            try
+            {
                 return (IQueryable)Activator.CreateInstance(typeof(SubstraitQuery<>).MakeGenericType(elementType), new object[] { this, expression })!;
             }
-            catch (TargetInvocationException tie) {
+            catch (TargetInvocationException tie)
+            {
                 throw tie.InnerException!;
-            }
+            }*/
         }
-        
-        IQueryable<T> IQueryProvider.CreateQuery<T>(Expression expression) {
-            return new SubstraitQuery<T>(this, expression, null!);
+
+        IQueryable<T> IQueryProvider.CreateQuery<T>(Expression expression)
+        {
+            throw new NotImplementedException();
+            /*return new SubstraitQuery<T>(this, expression);*/
         }
 
         public abstract object? Execute(Expression expression);

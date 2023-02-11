@@ -15,7 +15,7 @@ namespace SubLinq
         public Plan ToPlan()
         {
             Plan plan = new Plan();
-            plan.Relations.Add(GetRoot().Rel);
+            plan.Relations.Add(GetRoot().PlanRel);
             return plan;
         }
 

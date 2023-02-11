@@ -8,19 +8,15 @@ namespace SubLinq
 {
     public class SubstraitQueryProvider : BaseQueryProvider
     {
-        private Type.Types.NamedStruct schema;
-
-        public SubstraitQueryProvider(Type.Types.NamedStruct schema)
+        public SubstraitQueryProvider()
         {
-            this.schema = schema;
         }
-        
+
         public override object? Execute(Expression expression)
         {
-            var expressionVisitor = new SubstraitExpressionVisitor(schema);
-            var rel = expressionVisitor.VisitRel(expression);
-            Console.WriteLine(rel);
-            throw new Exception();
+            var expressionVisitor = new DotnetExpressionVisitor();
+            return expressionVisitor.VisitDotnetExpression(expression);
         }
+
     }
 }

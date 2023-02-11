@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.3</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
@@ -10,12 +10,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Apache.Arrow" Version="5.0.0" />
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
+    <Protobuf Include="../Submodules/substrait/proto/**/*.proto" ProtoRoot="../Submodules/substrait/proto" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Substrait\Substrait.csproj" />
+    <PackageReference Include="Apache.Arrow" Version="5.0.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.21.9" />
+    <PackageReference Include="Grpc.Tools" Version="2.50.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
   </ItemGroup>
+ 
+  <!--ItemGroup>
+    <ProjectReference Include="..\Substrait\Substrait.csproj" />
+  </ItemGroup-->
 
 </Project>

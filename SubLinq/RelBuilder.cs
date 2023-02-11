@@ -4,15 +4,15 @@ namespace SubLinq
 {
     public class RelBuilder
     {
-        public Rel Rel;
+        public PlanRel PlanRel;
         protected PlanBuilder PlanBuilder { get; }
 
-        public RelBuilder(PlanBuilder planBuilder, Rel rel)
+        public RelBuilder(PlanBuilder planBuilder, PlanRel rel)
         {
             PlanBuilder = planBuilder;
-            Rel = rel;
+            PlanRel = rel;
         }
-        
+
         protected Plan ToPlan()
         {
             return PlanBuilder.ToPlan();
